@@ -1,9 +1,9 @@
-import atexit
-import time
+import csv
 import json
 from message import message_pb2
-import psycopg2
+import random
 import requests
+import time
 from typing import List
 from typing import Tuple
 from typing import Dict
@@ -11,52 +11,20 @@ from typing import Dict
 
 api_key_server: str = 'http://localhost:8080/get'
 write_server: str = 'http://localhost:8081/post'
-init_query_sql: str = 'SELECT id, serial FROM youtube.stats.channels ORDER BY RANDOM() LIMIT 50'
-user: str = 'admin'
-password: str = ''
-pg_host: str = 'localhost'
-pg_port: str = '5432'
-database: str = 'youtube'
 chunk_size: int = 50
 google_api: str = 'https://www.googleapis.com/youtube/v3/channels?part=statistics&key=%s&id=%s'
 
 
-def divide_chunks(l: List[Tuple[int, str]], n=chunk_size):
-    while True:
-        for i in range(0, len(l), n):
-            yield l[i:i + n]
-
-
-def connect() -> psycopg2:
-    print('Connecting to db')
-    connection: psycopg2 = psycopg2.connect(
-        user=user,
-        password=password,
-        host=pg_host,
-        port=pg_port,
-        database=database)
-
-    def exit_func() -> None:
-        print('Closing connection')
-        conn.close()
-
-    atexit.register(exit_func)
-    return connection
-
-
-conn: psycopg2 = connect()
-
-
 def get_channels() -> List[Tuple[int, str]]:
-    cursor = conn.cursor()
-    cursor.execute(init_query_sql)
+    csv_file = open('./channels.csv', 'r')
+    csv_reader = csv.reader(csv_file, delimiter=',')
 
-    records = cursor.fetchall()
+    records: List[Tuple[int, str]] = []
+    for (idx, serial) in csv_reader:
+        records.append((int(idx), serial))
 
+    print('Retrieved', len(records), 'records')
     return records
-
-
-store: List[Tuple[int, str]] = get_channels()
 
 
 def get_api_key() -> str:
@@ -128,8 +96,10 @@ def payload_process(chunk: List[Tuple[int, str]]) -> None:
 
 
 def main() -> None:
+    chans: List[Tuple[int, str]] = get_channels()
+
     while True:
-        chunk: List[Tuple[int, str]] = get_channels()
+        chunk: List[Tuple[int, str]] = random.choices(chans, k=50)
         payload_process(chunk)
 
 
