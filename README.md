@@ -1,2 +1,2 @@
-# sequential-writer
-Rewrite of rust sequential writer
+# random-writer
+A rewrite of rust-random-writer
